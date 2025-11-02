@@ -7,8 +7,8 @@ class BPlusTreeNode {
     boolean isLeaf;
     List<String> keys;
     List<BPlusTreeNode> children;
-    List<String> values; // only for leaf nodes
-    BPlusTreeNode next;  // link for leaf nodes
+    List<String> values;
+    BPlusTreeNode next;
 
     BPlusTreeNode(boolean isLeaf) {
         this.isLeaf = isLeaf;

@@ -3,7 +3,7 @@ package dba;
 import java.util.ArrayList;
 
 public class BPlusTree {
-    private final int order; // max number of keys per node
+    private final int order;
     private BPlusTreeNode root;
 
     public BPlusTree(int order) {
@@ -68,30 +68,25 @@ public class BPlusTree {
 
         BPlusTreeNode newNode = new BPlusTreeNode(fullChild.isLeaf);
 
-        // Split logic for leaf node
+        
         if (fullChild.isLeaf) {
             newNode.keys.addAll(fullChild.keys.subList(mid, fullChild.keys.size()));
             newNode.values.addAll(fullChild.values.subList(mid, fullChild.values.size()));
 
-            // Shrink original node
             fullChild.keys = new ArrayList<>(fullChild.keys.subList(0, mid));
             fullChild.values = new ArrayList<>(fullChild.values.subList(0, mid));
 
-            // Connect leaf nodes
             newNode.next = fullChild.next;
             fullChild.next = newNode;
 
-            // Insert key to parent
             parent.keys.add(index, newNode.keys.get(0));
             parent.children.add(index + 1, newNode);
         } else {
-            // For internal node
             String middleKey = fullChild.keys.get(mid);
 
             newNode.keys.addAll(fullChild.keys.subList(mid + 1, fullChild.keys.size()));
             newNode.children.addAll(fullChild.children.subList(mid + 1, fullChild.children.size()));
 
-            // Shrink the original node
             fullChild.keys = new ArrayList<>(fullChild.keys.subList(0, mid));
             fullChild.children = new ArrayList<>(fullChild.children.subList(0, mid + 1));
 
@@ -113,16 +108,14 @@ public class BPlusTree {
     }
     
     public void delete(String key) {
-        if (root == null) return; // empty tree
+        if (root == null) return;
 
         deleteRecursive(root, key);
 
-        // Adjust root if it became empty
         if (!root.isLeaf && root.keys.size() == 0 && root.children.size() > 0) {
             root = root.children.get(0);
         }
 
-        // If root is a leaf and empty, make tree empty
         if (root.isLeaf && root.keys.size() == 0) {
             root = null;
         }
@@ -137,14 +130,13 @@ public class BPlusTree {
                     return true;
                 }
             }
-            return false; // not found
+            return false;
         } else {
             int i = 0;
             while (i < node.keys.size() && key.compareToIgnoreCase(node.keys.get(i)) >= 0)
                 i++;
             boolean deleted = deleteRecursive(node.children.get(i), key);
 
-            // Update parent key if necessary
             if (deleted) {
                 if (i < node.keys.size() && node.children.get(i + 1).keys.size() > 0) {
                     node.keys.set(i, node.children.get(i + 1).keys.get(0));
