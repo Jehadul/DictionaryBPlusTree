@@ -1,154 +1,200 @@
 package dba;
 
 import java.util.ArrayList;
+import java.util.Collections;
 
 public class BPlusTree {
-    private final int order;
-    private BPlusTreeNode root;
+	private final int order;
+	private BPlusTreeNode root;
+	int lastHeight = 0;
+	long lastTimeNs = 0;
 
-    public BPlusTree(int order) {
-        this.order = order;
-        this.root = new BPlusTreeNode(true);
-    }
+	public BPlusTree(int order) {
+		this.order = order;
+		this.root = new BPlusTreeNode(true);
+	}
 
-    // Search
-    public String search(String key) {
-        BPlusTreeNode node = root;
-        while (!node.isLeaf) {
-            int i = 0;
-            while (i < node.keys.size() && key.compareToIgnoreCase(node.keys.get(i)) >= 0)
-                i++;
-            node = node.children.get(i);
-        }
+	public String search(String key) {
+	    long start = System.nanoTime();
+	    lastHeight = 0;
 
-        for (int i = 0; i < node.keys.size(); i++) {
-            if (node.keys.get(i).equalsIgnoreCase(key))
-                return node.values.get(i);
-        }
-        return null;
-    }
+	    BPlusTreeNode node = root;
 
-    // Insert
-    public void insert(String key, String value) {
-        BPlusTreeNode r = root;
-        if (r.keys.size() == order - 1) {
-            BPlusTreeNode newRoot = new BPlusTreeNode(false);
-            newRoot.children.add(r);
-            splitChild(newRoot, 0);
-            root = newRoot;
-        }
-        insertNonFull(root, key, value);
-    }
+	    while (!node.isLeaf) {
+	        lastHeight++;
 
-    private void insertNonFull(BPlusTreeNode node, String key, String value) {
-        if (node.isLeaf) {
-            int i = 0;
-            while (i < node.keys.size() && key.compareToIgnoreCase(node.keys.get(i)) > 0)
-                i++;
-            node.keys.add(i, key);
-            node.values.add(i, value);
-        } else {
-            int i = 0;
-            while (i < node.keys.size() && key.compareToIgnoreCase(node.keys.get(i)) >= 0)
-                i++;
-            BPlusTreeNode child = node.children.get(i);
+	        int i = Collections.binarySearch(
+	            node.keys,
+	            key,
+	            String.CASE_INSENSITIVE_ORDER
+	        );
 
-            if (child.keys.size() == order - 1) {
-                splitChild(node, i);
-                if (key.compareToIgnoreCase(node.keys.get(i)) >= 0)
-                    i++;
-            }
-            insertNonFull(node.children.get(i), key, value);
-        }
-    }
+	        if (i >= 0)
+	            i++;
+	        else
+	            i = -i - 1;
 
-    private void splitChild(BPlusTreeNode parent, int index) {
-        BPlusTreeNode fullChild = parent.children.get(index);
-        int mid = order / 2;
+	        node = node.children.get(i);
+	    }
 
-        BPlusTreeNode newNode = new BPlusTreeNode(fullChild.isLeaf);
+	    lastHeight++;
 
-        
-        if (fullChild.isLeaf) {
-            newNode.keys.addAll(fullChild.keys.subList(mid, fullChild.keys.size()));
-            newNode.values.addAll(fullChild.values.subList(mid, fullChild.values.size()));
+	    int i = Collections.binarySearch(
+	        node.keys,
+	        key,
+	        String.CASE_INSENSITIVE_ORDER
+	    );
 
-            fullChild.keys = new ArrayList<>(fullChild.keys.subList(0, mid));
-            fullChild.values = new ArrayList<>(fullChild.values.subList(0, mid));
+	    lastTimeNs = System.nanoTime() - start;
 
-            newNode.next = fullChild.next;
-            fullChild.next = newNode;
+	    if (i >= 0) {
+	        return node.values.get(i);
+	    } else {
+	        return null;
+	    }
+	}
 
-            parent.keys.add(index, newNode.keys.get(0));
-            parent.children.add(index + 1, newNode);
-        } else {
-            String middleKey = fullChild.keys.get(mid);
 
-            newNode.keys.addAll(fullChild.keys.subList(mid + 1, fullChild.keys.size()));
-            newNode.children.addAll(fullChild.children.subList(mid + 1, fullChild.children.size()));
+	// Insert
+	public void insert(String key, String value) {
+		BPlusTreeNode r = root;
+		if (r.keys.size() == order - 1) {
+			BPlusTreeNode newRoot = new BPlusTreeNode(false);
+			newRoot.children.add(r);
+			splitChild(newRoot, 0);
+			root = newRoot;
+		}
+		insertNonFull(root, key, value);
+	}
 
-            fullChild.keys = new ArrayList<>(fullChild.keys.subList(0, mid));
-            fullChild.children = new ArrayList<>(fullChild.children.subList(0, mid + 1));
+	private void insertNonFull(BPlusTreeNode node, String key, String value) {
+		if (node.isLeaf) {
+			int i = 0;
+			while (i < node.keys.size() && key.compareToIgnoreCase(node.keys.get(i)) > 0)
+				i++;
+			node.keys.add(i, key);
+			node.values.add(i, value);
+		} else {
+			int i = 0;
+			while (i < node.keys.size() && key.compareToIgnoreCase(node.keys.get(i)) >= 0)
+				i++;
+			BPlusTreeNode child = node.children.get(i);
 
-            parent.keys.add(index, middleKey);
-            parent.children.add(index + 1, newNode);
-        }
-    }
+			if (child.keys.size() == order - 1) {
+				splitChild(node, i);
+				if (key.compareToIgnoreCase(node.keys.get(i)) >= 0)
+					i++;
+			}
+			insertNonFull(node.children.get(i), key, value);
+		}
+	}
 
-    // Display all
-    public void display() {
-        BPlusTreeNode node = root;
-        while (!node.isLeaf) node = node.children.get(0);
+	private void splitChild(BPlusTreeNode parent, int index) {
+		BPlusTreeNode fullChild = parent.children.get(index);
+		int mid = order / 2;
 
-        while (node != null) {
-            for (int i = 0; i < node.keys.size(); i++)
-                System.out.println(node.keys.get(i) + " → " + node.values.get(i));
-            node = node.next;
-        }
-    }
-    
-    public void delete(String key) {
-        if (root == null) return;
+		BPlusTreeNode newNode = new BPlusTreeNode(fullChild.isLeaf);
 
-        deleteRecursive(root, key);
+		if (fullChild.isLeaf) {
+			newNode.keys.addAll(fullChild.keys.subList(mid, fullChild.keys.size()));
+			newNode.values.addAll(fullChild.values.subList(mid, fullChild.values.size()));
 
-        if (!root.isLeaf && root.keys.size() == 0 && root.children.size() > 0) {
-            root = root.children.get(0);
-        }
+			fullChild.keys = new ArrayList<>(fullChild.keys.subList(0, mid));
+			fullChild.values = new ArrayList<>(fullChild.values.subList(0, mid));
 
-        if (root.isLeaf && root.keys.size() == 0) {
-            root = null;
-        }
-    }
+			newNode.next = fullChild.next;
+			fullChild.next = newNode;
 
-    private boolean deleteRecursive(BPlusTreeNode node, String key) {
-        if (node.isLeaf) {
-            for (int i = 0; i < node.keys.size(); i++) {
-                if (node.keys.get(i).equalsIgnoreCase(key)) {
-                    node.keys.remove(i);
-                    node.values.remove(i);
-                    return true;
-                }
-            }
-            return false;
-        } else {
-            int i = 0;
-            while (i < node.keys.size() && key.compareToIgnoreCase(node.keys.get(i)) >= 0)
-                i++;
-            boolean deleted = deleteRecursive(node.children.get(i), key);
+			parent.keys.add(index, newNode.keys.get(0));
+			parent.children.add(index + 1, newNode);
+		} else {
+			String middleKey = fullChild.keys.get(mid);
 
-            if (deleted) {
-                if (i < node.keys.size() && node.children.get(i + 1).keys.size() > 0) {
-                    node.keys.set(i, node.children.get(i + 1).keys.get(0));
-                }
-            }
-            return deleted;
-        }
-    }
-    
-    public BPlusTreeNode getRoot() {
-        return root;
-    }
+			newNode.keys.addAll(fullChild.keys.subList(mid + 1, fullChild.keys.size()));
+			newNode.children.addAll(fullChild.children.subList(mid + 1, fullChild.children.size()));
 
+			fullChild.keys = new ArrayList<>(fullChild.keys.subList(0, mid));
+			fullChild.children = new ArrayList<>(fullChild.children.subList(0, mid + 1));
+
+			parent.keys.add(index, middleKey);
+			parent.children.add(index + 1, newNode);
+		}
+	}
+
+	// Display all
+	public void display() {
+		BPlusTreeNode node = root;
+		while (!node.isLeaf)
+			node = node.children.get(0);
+
+		while (node != null) {
+			for (int i = 0; i < node.keys.size(); i++)
+				System.out.println(node.keys.get(i) + " → " + node.values.get(i));
+			node = node.next;
+		}
+	}
+
+	public void delete(String key) {
+		if (root == null)
+			return;
+
+		deleteRecursive(root, key);
+
+		if (!root.isLeaf && root.keys.size() == 0 && root.children.size() > 0) {
+			root = root.children.get(0);
+		}
+
+		if (root.isLeaf && root.keys.size() == 0) {
+			root = null;
+		}
+	}
+
+	private boolean deleteRecursive(BPlusTreeNode node, String key) {
+		if (node.isLeaf) {
+			for (int i = 0; i < node.keys.size(); i++) {
+				if (node.keys.get(i).equalsIgnoreCase(key)) {
+					node.keys.remove(i);
+					node.values.remove(i);
+					return true;
+				}
+			}
+			return false;
+		} else {
+			int i = 0;
+			while (i < node.keys.size() && key.compareToIgnoreCase(node.keys.get(i)) >= 0)
+				i++;
+			boolean deleted = deleteRecursive(node.children.get(i), key);
+
+			if (deleted) {
+				if (i < node.keys.size() && node.children.get(i + 1).keys.size() > 0) {
+					node.keys.set(i, node.children.get(i + 1).keys.get(0));
+				}
+			}
+			return deleted;
+		}
+	}
+
+	public BPlusTreeNode getRoot() {
+		return root;
+	}
+
+	public int getHeight() {
+		int height = 0;
+		BPlusTreeNode current = root;
+
+		while (current != null) {
+			height++;
+			if (current.isLeaf)
+				break;
+			current = current.children.get(0);
+		}
+		return height;
+	}
+
+	public long searchWithTime(String key) {
+		long start = System.nanoTime();
+		search(key);
+		return System.nanoTime() - start;
+	}
 
 }

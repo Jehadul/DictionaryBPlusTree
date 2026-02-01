@@ -36,8 +36,11 @@ public class DictionaryBPlusTree {
 					System.out.print("Enter English word: ");
 					String eng = sc.nextLine();
 					String result = dictionary.search(eng);
-					if (result != null)
+					if (result != null) {
 						System.out.println("Meaning: " + result);
+						//System.out.println("Height Traversed: " + dictionary.lastHeight);
+						//System.out.println("Time Taken: " + dictionary.lastTimeNs + " ns");
+					}
 					else
 						System.out.println("Not found!");
 				}
